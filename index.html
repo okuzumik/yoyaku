@@ -310,6 +310,38 @@ header {
 @keyframes spin { to { transform: rotate(360deg); } }
 
 
+
+/* ── オンライントグル（管理） ── */
+.online-toggle {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 12px; cursor: pointer; user-select: none;
+}
+.online-toggle-track {
+  width: 38px; height: 20px; border-radius: 10px;
+  background: var(--rule); position: relative; transition: .2s; flex-shrink: 0;
+}
+.online-toggle-track.on { background: var(--open); }
+.online-toggle-knob {
+  width: 16px; height: 16px; border-radius: 50%; background: #fff;
+  position: absolute; top: 2px; left: 2px; transition: .2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.online-toggle-track.on .online-toggle-knob { left: 20px; }
+.online-toggle-lbl { font-size: .78rem; }
+
+/* ── オンライン可バッジ（ユーザー） ── */
+.badge-online {
+  font-size: .68rem; color: var(--open); font-weight: 700;
+}
+
+/* ── オンライン案内ノート ── */
+.online-note {
+  background: var(--open-bg); border: 1px solid var(--open-bd);
+  border-radius: var(--r); padding: 9px 13px;
+  font-size: .78rem; color: var(--open);
+  margin-bottom: 14px; line-height: 1.6;
+}
+
 /* ── 2カラムレイアウト ── */
 .main-layout {
   display: grid;
@@ -575,10 +607,11 @@ function renderDaySlots(slots, byDate) {
         </div>`;
     }
     const isSel = selSlotId === s.id;
+    const onlineTag = s.online_ok ? `<span class="badge-online">🌐 オンライン専用</span>` : '';
     return `
       <div class="slot-row open${isSel ? ' sel-slot' : ''}" onclick="window._onSlotClick('${s.id}')">
         <div><div class="slot-time">${st}</div><div class="slot-dur">${dl2}</div></div>
-        <div class="slot-name">（空き）</div>
+        <div class="slot-name">${s.online_ok ? onlineTag : '（空き）'}</div>
         <span class="slot-badge badge-open">${isSel ? '✓ 選択中' : '記入する'}</span>
       </div>`;
   }).join('');
@@ -647,6 +680,10 @@ function renderWriteForm(slot, allSlots) {
         <label class="form-lbl">メールアドレス <span class="req">*</span></label>
         <input class="form-inp" id="f-email" type="email" placeholder="s1234567@saitama-u.ac.jp" maxlength="80">
       </div>
+      ${slot.online_ok ? `
+      <div class="online-note">
+        🌐 この枠はオンラインミーティングでの実施になります。URLは後日メールでお知らせします。
+      </div>` : ''}
       <div class="form-row">
         <label class="form-lbl">面談の目的 <span class="req">*</span></label>
         <select class="form-inp" id="f-purpose">
@@ -837,6 +874,7 @@ window._exitAdmin = () => { isAdmin = false; selDate = null; selSlotId = null; l
 
 // ── 管理: スロット設定 ────────────────────────────────────────────
 let adminSelDur = 20;
+let adminOnlineOk = false;  // オンライン可フラグ
 
 async function renderAdminCal() {
   const slots  = await fetchSlots(todayStr());
@@ -902,27 +940,39 @@ function buildSlotEditor(dateStr, existing) {
         aslots += `<div class="aslot booked">${t}<small>${ex.booked_name||'予約済'}</small></div>`;
       } else {
         const dl2 = durLabel(ex.duration_minutes||20);
-        aslots += `<div class="aslot on" onclick="window._removeSlot('${ex.id}')" title="クリックで削除">${t}<small>✓${dl2}</small></div>`;
+        const onBadge = ex.online_ok ? '🌐' : '';
+        aslots += `<div class="aslot on" onclick="window._removeSlot('${ex.id}')" title="クリックで削除">${t}${onBadge}<small>✓${dl2}</small></div>`;
       }
     } else {
       aslots += `<div class="aslot" onclick="window._addSlot('${dateStr}','${t}')">${t}</div>`;
     }
   }
 
+  const onlineLbl = adminOnlineOk
+    ? `<span style="color:var(--open);font-weight:700;">オンライン専用 ✓</span>`
+    : `<span style="color:var(--taken);">対面</span>`;
+
   return `
     <div style="margin-top:18px;border-top:1px solid var(--rule);padding-top:16px;">
       <div style="font-weight:500;font-size:.875rem;margin-bottom:10px;">${dateLabel(dateStr)} のスロット</div>
-      <div style="font-size:.72rem;color:var(--taken);margin-bottom:8px;">追加時の面談時間：</div>
+      <div style="font-size:.72rem;color:var(--taken);margin-bottom:6px;">追加時の設定：</div>
       <div class="dur-sel">${durBtns}</div>
+      <div class="online-toggle" onclick="window._toggleOnline()">
+        <div class="online-toggle-track ${adminOnlineOk ? 'on' : ''}">
+          <div class="online-toggle-knob"></div>
+        </div>
+        <span class="online-toggle-lbl">オンライン専用枠　${onlineLbl}</span>
+      </div>
       <div class="aslot-grid">${aslots}</div>
       <div style="font-size:.65rem;color:var(--taken);margin-top:8px;">
-        緑＝設定済（クリックで削除）　赤文字＝予約済（削除不可）
+        緑＝設定済（クリックで削除）　赤文字＝予約済（削除不可）　🌐＝オンライン専用
       </div>
     </div>
   `;
 }
 
 window._selDur = async dur => { adminSelDur = dur; await renderAdminCal(); };
+window._toggleOnline = async () => { adminOnlineOk = !adminOnlineOk; await renderAdminCal(); };
 window._adminDateClick = async ds => { selDate = ds; await renderAdminCal(); };
 window._adminPrev = async () => { curMonth.setMonth(curMonth.getMonth()-1); await renderAdminCal(); };
 window._adminNext = async () => { curMonth.setMonth(curMonth.getMonth()+1); await renderAdminCal(); };
@@ -932,6 +982,7 @@ window._addSlot = async (date, start) => {
   await setDoc(doc(db, 'slots', id), {
     date, start_time: start + ':00',
     duration_minutes: adminSelDur,
+    online_ok: adminOnlineOk,
     is_booked: false, booked_name: '',
   });
   await renderAdminCal();
