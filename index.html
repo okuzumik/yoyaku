@@ -607,7 +607,7 @@ function renderDaySlots(slots, byDate) {
         </div>`;
     }
     const isSel = selSlotId === s.id;
-    const onlineTag = s.online_ok ? `<span class="badge-online">🌐 オンライン専用</span>` : '';
+    const onlineTag = s.online_ok ? `<span class="badge-online">🌐 オンライン専用</span><span style="color:var(--taken);font-size:.8rem;">（空き）</span>` : '';
     return `
       <div class="slot-row open${isSel ? ' sel-slot' : ''}" onclick="window._onSlotClick('${s.id}')">
         <div><div class="slot-time">${st}</div><div class="slot-dur">${dl2}</div></div>
