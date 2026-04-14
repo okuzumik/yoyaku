@@ -430,11 +430,11 @@ const CONFIG = {
   slotEndHour:   18,
 
   // EmailJS
-  emailjsPublicKey:  'GncUX8TG8OdS4LQgB',
-  emailjsServiceId:  'service_k919gf5',
-  emailjsTemplateId: 'template_5mn7v9i',       // 管理者通知
-  emailjsConfirmId:  'template_bvlfb7e',        // 申込者確認
-  adminEmail:        'okuzumik@mail.saitama-u.ac.jp',
+  emailjsPublicKey:   'GncUX8TG8OdS4LQgB',
+  emailjsServiceId:   'service_k919gf5',
+  emailjsNormalId:    'template_bvlfb7e',   // 対面面談（教師・学生 共通）
+  emailjsOnlineId:    'template_s646f9x',   // オンライン面談（教師・学生 共通）
+  adminEmail:         'okuzumik@mail.saitama-u.ac.jp',
 
   firebase: {
     apiKey:            "AIzaSyD6p5cnzsCXgUY_jqzBOqW7dPqaWjutIeo",
@@ -791,37 +791,32 @@ window._doWrite = async () => {
       booked_at: new Date().toISOString(),
     });
 
-    // メール通知（失敗してもユーザー側は完了扱い）
-    try {
-      await emailjs.send(CONFIG.emailjsServiceId, CONFIG.emailjsTemplateId, {
-        to_email:   CONFIG.adminEmail,
-        date:       dateLabel(selDate),
-        time_range: timeRange,
-        slot_count: selSlotCount + '枠',
-        name,
-        email,
-        purpose,
-        note:       note || '（なし）',
-      });
-    } catch(mailErr) {
-      console.warn('メール送信失敗:', mailErr);
-    }
+    // スロットがオンライン専用かどうかで使うテンプレートを切り替え
+    const isOnline  = targetSlots[0].online_ok === true;
+    const templateId = isOnline ? CONFIG.emailjsOnlineId : CONFIG.emailjsNormalId;
+    const mailParams = {
+      date:       dateLabel(selDate),
+      time_range: timeRange,
+      slot_count: selSlotCount + '枠',
+      name,
+      email,
+      purpose,
+      note: note || '（なし）',
+    };
 
-    // 申込者への確認メール
+    // 教師宛
     try {
-      await emailjs.send(CONFIG.emailjsServiceId, CONFIG.emailjsConfirmId, {
-        to_email:   email,
-        date:       dateLabel(selDate),
-        time_range: timeRange,
-        slot_count: selSlotCount + '枠',
-        name,
-        email,
-        purpose,
-        note:       note || '（なし）',
+      await emailjs.send(CONFIG.emailjsServiceId, templateId, {
+        ...mailParams, to_email: CONFIG.adminEmail,
       });
-    } catch(mailErr) {
-      console.warn('確認メール送信失敗:', mailErr);
-    }
+    } catch(e) { console.warn('教師宛メール失敗:', e); }
+
+    // 学生宛
+    try {
+      await emailjs.send(CONFIG.emailjsServiceId, templateId, {
+        ...mailParams, to_email: email,
+      });
+    } catch(e) { console.warn('学生宛メール失敗:', e); }
 
     setApp(`
       <div class="card">
