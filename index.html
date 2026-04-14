@@ -285,9 +285,15 @@ header {
 .booking-item {
   border: 1px solid var(--rule); border-radius: var(--r);
   padding: 12px 14px; margin-bottom: 8px; background: var(--paper);
-  display: grid; grid-template-columns: 100px 80px auto 1fr;
+  display: grid; grid-template-columns: 100px 90px 60px 1fr auto;
   gap: 10px; align-items: center; font-size: .83rem;
 }
+.btn-del {
+  background: none; border: 1px solid #ef9a9a; color: var(--error-fg);
+  padding: 4px 10px; border-radius: var(--r); font-size: .72rem;
+  cursor: pointer; font-family: inherit; transition: .15s; white-space: nowrap;
+}
+.btn-del:hover { background: var(--error-fg); color: #fff; border-color: var(--error-fg); }
 .booking-date { font-weight: 700; font-size: .78rem; }
 .booking-time { color: var(--open); font-weight: 700; }
 .booking-dur  { font-size: .7rem; color: var(--taken); background: var(--cream); padding: 2px 7px; border-radius: 20px; }
@@ -958,18 +964,36 @@ async function renderAdminBookings() {
     const tr  = b.time_range || st;
     const cnt = b.slot_count ? `${b.slot_count}枠` : dur;
     const sub = [b.purpose, b.email, b.note].filter(Boolean).join('　');
+    const slotIds = JSON.stringify(b.slot_ids || [b.slot_id]).replace(/"/g, '&quot;');
     return `
-      <div class="booking-item">
+      <div class="booking-item" id="bi-${b.id}">
         <div class="booking-date">${dl}</div>
         <div class="booking-time">${tr}</div>
         <div class="booking-dur">${cnt}</div>
         <div class="booking-name">${b.name}${sub ? `<div style="font-size:.7rem;color:var(--taken);margin-top:2px;">${sub}</div>` : ''}</div>
+        <button class="btn-del" onclick="window._deleteBooking('${b.id}','${b.name}','${dl}',${slotIds})">削除</button>
       </div>
     `;
   }).join('');
 
   document.getElementById('admin-body').innerHTML = items;
 }
+
+window._deleteBooking = async (bookingId, name, dl, slotIds) => {
+  if (!confirm(`${dl}　${name} さんの予約を削除しますか？\nスロットも空き状態に戻ります。`)) return;
+  try {
+    // 予約レコード削除
+    await deleteDoc(doc(db, 'bookings', bookingId));
+    // 関連スロットを空きに戻す
+    const ids = Array.isArray(slotIds) ? slotIds : [slotIds];
+    for (const sid of ids) {
+      if (sid) await setDoc(doc(db, 'slots', sid), { is_booked: false, booked_name: '' }, { merge: true });
+    }
+    await renderAdminBookings();
+  } catch(e) {
+    alert('削除に失敗しました: ' + e.message);
+  }
+};
 
 // ── ヘルパー: 時刻スロット生成 ────────────────────────────────────
 function genSlots(startH, endH, step) {
