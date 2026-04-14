@@ -78,7 +78,7 @@ header {
 
 /* ── メインレイアウト ── */
 .wrap {
-  max-width: 800px; margin: 0 auto;
+  max-width: 1100px; margin: 0 auto;
   padding: 32px 20px 60px;
   position: relative; z-index: 1;
 }
@@ -303,6 +303,33 @@ header {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+
+/* ── 2カラムレイアウト ── */
+.main-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+.panel-right {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.panel-right-placeholder {
+  background: rgba(255,255,255,.6);
+  border: 1.5px dashed var(--rule);
+  border-radius: var(--r);
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--taken);
+  font-size: .82rem;
+  line-height: 1.8;
+}
+@media (max-width: 700px) {
+  .main-layout { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 560px) {
   .wrap { padding: 20px 12px 50px; }
   .card { padding: 16px; }
@@ -324,10 +351,10 @@ header {
 <div class="wrap">
   <div class="notice">
     <ul>
-      <li>面談予約は原則として前日までにお申し込みください。（前日夜の場合は、確認のためメールもいただけると安心です）</li>
-      <li>急な予定変更により、面談が実施できなくなる場合もあります。ご了承ください。</li>
+      <li>面談予約は原則として前日までにお申し込みください。</li>
       <li>面談時間は1枠20分が原則ですが、相談や練習などは2枠（40分）や3枠（60分）など、面談内容に応じて複数枠を予約してください。</li>
-      <li>キャンセルなどは早めにメールにてご連絡ください。</li>
+      <li>急な予定変更により、面談が実施できなくなる場合もあります。ご了承ください。</li>
+      <li>キャンセル・変更などは早めにメールにてご連絡ください。</li>
       <li>研究室は教育学部H棟405です。</li>
     </ul>
   </div>
@@ -495,22 +522,29 @@ function renderCalendar(byDate) {
     cells += `<div class="${cls}" ${click}>${d}${sup}</div>`;
   }
 
-  let slotHtml = '';
-  if (selDate) slotHtml = renderDaySlots(byDate[selDate] || [], byDate);
+  const rightHtml = selDate
+    ? renderDaySlots(byDate[selDate] || [], byDate)
+    : `<div class="panel-right-placeholder">← 日付をクリックすると<br>空き枠が表示されます</div>`;
 
   setApp(`
-    <div class="card">
-      <div class="cal-nav">
-        <div class="cal-month">${year}年${month+1}月</div>
-        <div class="nav-btns">
-          <button class="btn-nav" onclick="window._prevMon()">‹</button>
-          <button class="btn-nav" onclick="window._nextMon()">›</button>
+    <div class="main-layout">
+      <div>
+        <div class="card">
+          <div class="cal-nav">
+            <div class="cal-month">${year}年${month+1}月</div>
+            <div class="nav-btns">
+              <button class="btn-nav" onclick="window._prevMon()">‹</button>
+              <button class="btn-nav" onclick="window._nextMon()">›</button>
+            </div>
+          </div>
+          <div class="cal-grid">${cells}</div>
+          <div class="legend"><div class="leg"></div>予約可能日（数字は空き枠数）</div>
         </div>
       </div>
-      <div class="cal-grid">${cells}</div>
-      <div class="legend"><div class="leg"></div>予約可能日（数字は空き枠数）</div>
+      <div class="panel-right" id="right-panel">
+        ${rightHtml}
+      </div>
     </div>
-    ${slotHtml}
   `);
 }
 
@@ -638,7 +672,7 @@ window._onDateClick = ds => {
   selDate   = ds;
   selSlotId = null;
   loadUser();
-  setTimeout(() => document.getElementById('day-card')?.scrollIntoView({ behavior:'smooth', block:'start' }), 80);
+  setTimeout(() => document.getElementById('right-panel')?.scrollIntoView({ behavior:'smooth', block:'start' }), 80);
 };
 
 window._onSlotClick = id => {
