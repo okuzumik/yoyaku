@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>面談予約</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@300;400;500;700&family=Shippori+Antique&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:     #1a1a2e;
+  --paper:   #f7f5f0;
+  --cream:   #edeae3;
+  --rule:    #d6d1c8;
+  --accent:  #c0392b;
+  --accent2: #e8d5b0;
+  --open:    #2e7d52;
+  --open-bg: #e8f5ee;
+  --open-bd: #a5d6bc;
+  --taken:   #888;
+  --taken-bg:#f0eeea;
+  --r: 4px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Zen Kaku Gothic New', sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100vh;
+}
+
+/* ── お知らせ ── */
+.notice {
+  background: var(--accent2);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--r);
+  padding: 14px 18px;
+  margin-bottom: 18px;
+  font-size: .82rem;
+  line-height: 1.9;
+}
+.notice ul { padding-left: 1.2em; }
+.notice li { margin: 0; }
+
+/* ── 罫線背景 ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: repeating-linear-gradient(
+    transparent, transparent 31px, var(--rule) 31px, var(--rule) 32px
+  );
+  opacity: .25;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── ヘッダー ── */
+header {
+  background: var(--ink);
+  color: #fff;
+  padding: 20px 28px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: relative; z-index: 10;
+  border-bottom: 3px solid var(--accent);
+}
+.h-left { display: flex; align-items: baseline; gap: 14px; }
+.h-title {
+  font-family: 'Shippori Antique', serif;
+  font-size: 1.4rem; letter-spacing: .05em;
+}
+.h-sub { font-size: .7rem; opacity: .45; font-weight: 300; }
+.h-gear {
+  color: rgba(255,255,255,.3); cursor: pointer;
+  font-size: 1rem; user-select: none; transition: .2s;
+  background: none; border: none;
+}
+.h-gear:hover { color: rgba(255,255,255,.9); }
+
+/* ── メインレイアウト ── */
+.wrap {
+  max-width: 800px; margin: 0 auto;
+  padding: 32px 20px 60px;
+  position: relative; z-index: 1;
+}
+
+/* ── カード ── */
+.card {
+  background: rgba(255,255,255,.85);
+  backdrop-filter: blur(2px);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  padding: 24px;
+  margin-bottom: 18px;
+  box-shadow: 0 1px 8px rgba(0,0,0,.05);
+}
+
+/* ── カレンダー ── */
+.cal-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.cal-month {
+  font-family: 'Shippori Antique', serif;
+  font-size: 1.2rem; letter-spacing: .05em;
+}
+.nav-btns { display: flex; gap: 4px; }
+.btn-nav {
+  width: 32px; height: 32px; border: 1px solid var(--rule);
+  background: var(--paper); border-radius: var(--r);
+  cursor: pointer; font-size: .9rem; transition: .15s; color: var(--ink);
+}
+.btn-nav:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+.cal-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.cal-dh {
+  text-align: center; font-size: .68rem; color: var(--taken);
+  padding: 5px 0; font-weight: 500; letter-spacing: .05em;
+}
+.cal-d {
+  aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  border-radius: 2px; font-size: .8rem; position: relative;
+  transition: .12s; cursor: default;
+}
+.cal-d.past { color: var(--rule); }
+.cal-d.has-open {
+  background: var(--open-bg); color: var(--open);
+  font-weight: 700; cursor: pointer;
+  border: 1px solid var(--open-bd);
+}
+.cal-d.has-open:hover { background: var(--open); color: #fff; border-color: var(--open); }
+.cal-d.sel { background: var(--ink) !important; color: #fff !important; border-color: var(--ink) !important; }
+.cal-d.today { outline: 2px solid var(--accent); outline-offset: -2px; }
+.cal-d .cnt {
+  position: absolute; top: 2px; right: 3px;
+  font-size: .5rem; font-weight: 700; opacity: .7;
+}
+.legend {
+  margin-top: 10px; display: flex; gap: 14px;
+  font-size: .68rem; color: var(--taken); align-items: center;
+}
+.leg { width: 10px; height: 10px; background: var(--open-bg); border: 1px solid var(--open-bd); border-radius: 2px; }
+
+/* ── スロット一覧 ── */
+.day-head {
+  font-family: 'Shippori Antique', serif;
+  font-size: 1rem; margin-bottom: 16px; letter-spacing: .03em;
+  border-bottom: 2px solid var(--ink); padding-bottom: 8px;
+}
+.slot-list { display: flex; flex-direction: column; gap: 8px; }
+.slot-row {
+  display: grid; grid-template-columns: 90px 1fr auto;
+  align-items: center; gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--r);
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  transition: .15s;
+}
+.slot-row.open {
+  border-color: var(--open-bd); background: var(--open-bg); cursor: pointer;
+}
+.slot-row.open:hover { background: var(--open); color: #fff; border-color: var(--open); }
+.slot-row.open:hover .slot-time { color: #fff; }
+.slot-row.open:hover .slot-dur { color: rgba(255,255,255,.7); }
+.slot-row.taken { background: var(--taken-bg); }
+.slot-row.sel-slot { background: #e8f0fb; border-color: #5c85d6; }
+
+.slot-time { font-weight: 700; font-size: .9rem; color: var(--ink); }
+.slot-dur  { font-size: .68rem; color: var(--taken); margin-top: 1px; }
+.slot-name { font-size: .85rem; }
+.slot-name.taken-name { color: var(--taken); font-style: italic; }
+.slot-badge {
+  font-size: .62rem; padding: 3px 8px; border-radius: 20px;
+  font-weight: 700; letter-spacing: .05em; white-space: nowrap;
+}
+.badge-open  { background: var(--open); color: #fff; }
+.badge-taken { background: var(--taken-bg); color: var(--taken); border: 1px solid var(--rule); }
+
+/* ── 書き込みパネル ── */
+.write-head {
+  font-family: 'Shippori Antique', serif;
+  font-size: 1rem; margin-bottom: 14px;
+  display: flex; align-items: center; gap: 10px;
+}
+.write-tag {
+  background: var(--accent); color: #fff;
+  font-size: .62rem; padding: 3px 8px; border-radius: 20px;
+  font-family: 'Zen Kaku Gothic New', sans-serif;
+}
+.slot-info-box {
+  background: var(--accent2); border-radius: var(--r);
+  padding: 10px 14px; font-size: .83rem; margin-bottom: 16px;
+  border-left: 3px solid var(--accent);
+}
+.form-row { margin-bottom: 12px; }
+.form-lbl { display: block; font-size: .7rem; color: var(--taken); margin-bottom: 4px; font-weight: 500; letter-spacing: .05em; }
+.form-inp {
+  width: 100%; padding: 9px 12px;
+  border: 1px solid var(--rule); border-radius: var(--r);
+  font-family: inherit; font-size: .875rem;
+  background: var(--paper); color: var(--ink);
+  transition: .15s;
+}
+.form-inp:focus { outline: none; border-color: var(--ink); background: #fff; }
+.req { color: var(--accent); }
+
+.btn-row { display: flex; gap: 8px; margin-top: 14px; }
+.btn-submit {
+  flex: 1; background: var(--ink); color: #fff;
+  border: none; padding: 11px; border-radius: var(--r);
+  font-family: inherit; font-size: .875rem; cursor: pointer;
+  transition: .15s;
+}
+.btn-submit:hover { background: var(--accent); }
+.btn-submit:disabled { opacity: .4; cursor: not-allowed; }
+.btn-back {
+  background: none; border: 1px solid var(--rule);
+  padding: 11px 18px; border-radius: var(--r);
+  font-family: inherit; font-size: .8rem; cursor: pointer;
+  color: var(--taken); transition: .15s;
+}
+.btn-back:hover { border-color: var(--ink); color: var(--ink); }
+
+/* ── アラート ── */
+.alert { padding: 10px 14px; border-radius: var(--r); font-size: .8rem; margin-top: 8px; }
+.alert.ok  { background: var(--open-bg); color: var(--open); border: 1px solid var(--open-bd); }
+.alert.err { background: #fdecea; color: #b71c1c; border: 1px solid #ef9a9a; }
+
+/* ── 完了 ── */
+.done-wrap { text-align: center; padding: 40px 20px; }
+.done-ico { font-size: 2.5rem; margin-bottom: 12px; }
+.done-title { font-family: 'Shippori Antique', serif; font-size: 1.3rem; margin-bottom: 10px; }
+.done-sub { font-size: .85rem; color: var(--taken); line-height: 1.8; }
+
+/* ── 管理パネル ── */
+.admin-badge {
+  background: var(--accent); color: #fff;
+  font-size: .6rem; padding: 2px 8px; border-radius: 20px;
+  vertical-align: middle; margin-left: 8px;
+}
+.admin-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.admin-title { font-family: 'Shippori Antique', serif; font-size: 1.1rem; }
+.btn-exit {
+  background: none; border: 1px solid var(--rule);
+  padding: 7px 14px; border-radius: var(--r);
+  font-size: .78rem; font-family: inherit; cursor: pointer;
+  color: var(--taken); transition: .15s;
+}
+.btn-exit:hover { border-color: var(--ink); color: var(--ink); }
+
+.tabs { display: flex; border-bottom: 2px solid var(--rule); margin-bottom: 20px; }
+.tab {
+  padding: 8px 18px; font-size: .83rem; cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+  color: var(--taken); transition: .15s;
+}
+.tab.on { color: var(--ink); border-bottom-color: var(--ink); font-weight: 500; }
+
+/* ── 管理 スロット設定 ── */
+.admin-cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.aslot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 5px; margin-top: 10px; }
+.aslot {
+  padding: 9px 4px; border-radius: var(--r); border: 1px solid var(--rule);
+  font-size: .75rem; cursor: pointer; text-align: center; transition: .15s; background: var(--paper);
+}
+.aslot:hover { border-color: var(--open); color: var(--open); }
+.aslot.on { background: var(--open-bg); border-color: var(--open-bd); color: var(--open); font-weight: 700; }
+.aslot.booked { background: var(--taken-bg); color: var(--taken); cursor: not-allowed; border-color: var(--rule); }
+.aslot.booked small { display: block; font-size: .6rem; }
+.dur-sel {
+  display: flex; gap: 5px; margin-bottom: 12px; flex-wrap: wrap;
+}
+.dur-btn {
+  padding: 5px 12px; border: 1px solid var(--rule); border-radius: 20px;
+  font-size: .75rem; cursor: pointer; background: var(--paper);
+  transition: .15s; font-family: inherit;
+}
+.dur-btn.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+.dur-btn:hover:not(.on) { border-color: var(--ink); }
+
+/* ── 管理 予約一覧 ── */
+.booking-item {
+  border: 1px solid var(--rule); border-radius: var(--r);
+  padding: 12px 14px; margin-bottom: 8px; background: var(--paper);
+  display: grid; grid-template-columns: 100px 80px auto 1fr;
+  gap: 10px; align-items: center; font-size: .83rem;
+}
+.booking-date { font-weight: 700; font-size: .78rem; }
+.booking-time { color: var(--open); font-weight: 700; }
+.booking-dur  { font-size: .7rem; color: var(--taken); background: var(--cream); padding: 2px 7px; border-radius: 20px; }
+.booking-name { }
+.no-data { text-align: center; padding: 30px; color: var(--taken); font-size: .875rem; }
+
+/* ── ローディング ── */
+.loading { text-align: center; padding: 50px 20px; color: var(--taken); font-size: .875rem; }
+.spin {
+  display: inline-block; width: 18px; height: 18px;
+  border: 2px solid var(--rule); border-top-color: var(--ink);
+  border-radius: 50%; animation: spin .7s linear infinite; margin-right: 8px; vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 560px) {
+  .wrap { padding: 20px 12px 50px; }
+  .card { padding: 16px; }
+  .booking-item { grid-template-columns: 1fr 1fr; gap: 5px; }
+  .slot-row { grid-template-columns: 80px 1fr auto; gap: 8px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="h-left">
+    <div class="h-title" id="hd-title">面談予約</div>
+    <div class="h-sub" id="hd-sub">空き枠をクリックして記入してください</div>
+  </div>
+  <button class="h-gear" id="gear-btn" title="管理者">⚙</button>
+</header>
+
+<div class="wrap">
+  <div class="notice">
+    <ul>
+      <li>面談予約は原則として前日までにお申し込みください。（前日夜の場合は、確認のためメールもいただけると安心です）</li>
+      <li>急な予定変更により、面談が実施できなくなる場合もあります。ご了承ください。</li>
+      <li>面談時間は1枠20分が原則ですが、相談や練習などは2枠（40分）や3枠（60分）など、面談内容に応じて複数枠を予約してください。</li>
+      <li>キャンセルなどは早めにメールにてご連絡ください。</li>
+      <li>研究室は教育学部H棟405です。</li>
+    </ul>
+  </div>
+  <div id="app"><div class="loading"><span class="spin"></span>読み込み中…</div></div>
+</div>
+
+<!-- EmailJS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp }                        from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, doc,
+         getDocs, setDoc, deleteDoc, onSnapshot,
+         query, where, orderBy }                from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+/* ================================================================
+   ★ 設定エリア
+   ================================================================
+
+   【Firebase 設定手順】
+   1. https://console.firebase.google.com でプロジェクト作成
+   2. 「ウェブアプリを追加」してfirebaseConfigを取得
+   3. Firestore Database → 「テストモード」で作成
+      （本番運用時はルールを適切に設定してください）
+   4. 下記CONFIGに貼り付けて完成
+
+   ================================================================ */
+
+const CONFIG = {
+  appTitle:      '面談予約',
+  appSubtitle:   '空き枠をクリックして記入してください',
+  adminPassword: 'admin1234',  // ← 変更推奨
+  slotStartHour: 9,
+  slotEndHour:   18,
+
+  // EmailJS
+  emailjsPublicKey:  'GncUX8TG8OdS4LQgB',
+  emailjsServiceId:  'service_k919gf5',
+  emailjsTemplateId: 'template_5mn7v9i',       // 管理者通知
+  emailjsConfirmId:  'template_bvlfb7e',        // 申込者確認
+  adminEmail:        'okuzumik@mail.saitama-u.ac.jp',
+
+  firebase: {
+    apiKey:            "AIzaSyD6p5cnzsCXgUY_jqzBOqW7dPqaWjutIeo",
+    authDomain:        "k-yoyaku.firebaseapp.com",
+    projectId:         "k-yoyaku",
+    storageBucket:     "k-yoyaku.firebasestorage.app",
+    messagingSenderId: "381844063802",
+    appId:             "1:381844063802:web:04a76584950728bf65d703",
+  },
+};
+
+/* ================================================================
+   以下は編集不要
+   ================================================================ */
+
+// ── Firebase 初期化 ──────────────────────────────────────────────
+const app = initializeApp(CONFIG.firebase);
+const db  = getFirestore(app);
+
+// ── EmailJS 初期化 ────────────────────────────────────────────────
+emailjs.init(CONFIG.emailjsPublicKey);
+
+const slotsCol    = () => collection(db, 'slots');
+const bookingsCol = () => collection(db, 'bookings');
+
+// ── 状態 ─────────────────────────────────────────────────────────
+let isAdmin    = false;
+let adminTab   = 'calendar';
+let curMonth   = new Date();
+let selDate    = null;
+let selSlotId    = null;
+let selSlotCount = 1;  // 選択枠数
+let unsubscribe = null;
+
+const DURATIONS = [
+  { min: 20, label: '20分' },
+  { min: 30, label: '30分' },
+  { min: 60, label: '1時間' },
+];
+
+// ── ヘルパー ─────────────────────────────────────────────────────
+const p2       = n => String(n).padStart(2, '0');
+const todayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
+};
+const parseDt = ds => {
+  const [y,m,d] = ds.split('-').map(Number);
+  return new Date(y, m-1, d);
+};
+const dateLabel = ds => {
+  const [y,m,d] = ds.split('-').map(Number);
+  const dow = ['日','月','火','水','木','金','土'][new Date(y,m-1,d).getDay()];
+  return `${m}月${d}日（${dow}）`;
+};
+const durLabel = min => min === 60 ? '1時間' : `${min}分`;
+const slotId   = (date, start) => `${date}_${start.replace(':','')}`;
+
+function setApp(html) { document.getElementById('app').innerHTML = html; }
+
+// ── データ取得 ────────────────────────────────────────────────────
+async function fetchSlots(fromDate) {
+  // orderBy を date のみにしてインデックス不要化、start_time はJS側でソート
+  const q = query(slotsCol(), where("date", ">=", fromDate), orderBy("date"));
+  const snap = await getDocs(q);
+  const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return docs.sort((a,b) => (a.start_time > b.start_time ? 1 : -1));
+}
+
+async function fetchBookings() {
+  const snap = await getDocs(query(bookingsCol(), orderBy('booked_at', 'desc')));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+function groupByDate(slots) {
+  const map = {};
+  for (const s of slots) {
+    if (!map[s.date]) map[s.date] = [];
+    map[s.date].push(s);
+  }
+  return map;
+}
+async function loadUser() {
+  setApp('<div class="loading"><span class="spin"></span>読み込み中…</div>');
+  try {
+    const slots = await fetchSlots(todayStr());
+    const byDate = groupByDate(slots);
+    renderCalendar(byDate);
+  } catch(e) {
+    setApp(`<div class="card"><div class="alert err">接続エラー: ${e.message}<br><small>ブラウザのコンソール(F12)で詳細を確認してください。</small></div></div>`);
+  }
+}
+
+function renderCalendar(byDate) {
+  const year  = curMonth.getFullYear();
+  const month = curMonth.getMonth();
+  const today = parseDt(todayStr());
+  const dows  = ['日','月','火','水','木','金','土'];
+
+  let cells = dows.map(d => `<div class="cal-dh">${d}</div>`).join('');
+  const firstDow  = new Date(year, month, 1).getDay();
+  const lastDay   = new Date(year, month+1, 0).getDate();
+
+  for (let i = 0; i < firstDow; i++) cells += '<div class="cal-d"></div>';
+
+  for (let d = 1; d <= lastDay; d++) {
+    const ds    = `${year}-${p2(month+1)}-${p2(d)}`;
+    const dt    = parseDt(ds);
+    const isPast = dt < today;
+    const daySlots = byDate[ds] || [];
+    const openCnt  = daySlots.filter(s => !s.is_booked).length;
+    const isSel  = selDate === ds;
+    const isTdy  = dt.getTime() === today.getTime();
+
+    let cls = 'cal-d';
+    if (isPast)         cls += ' past';
+    else if (openCnt > 0) cls += ' has-open';
+    if (isSel)          cls += ' sel';
+    if (isTdy)          cls += ' today';
+
+    const click = (!isPast && openCnt > 0) ? `onclick="window._onDateClick('${ds}')"` : '';
+    const sup   = openCnt > 0 ? `<span class="cnt">${openCnt}</span>` : '';
+    cells += `<div class="${cls}" ${click}>${d}${sup}</div>`;
+  }
+
+  let slotHtml = '';
+  if (selDate) slotHtml = renderDaySlots(byDate[selDate] || [], byDate);
+
+  setApp(`
+    <div class="card">
+      <div class="cal-nav">
+        <div class="cal-month">${year}年${month+1}月</div>
+        <div class="nav-btns">
+          <button class="btn-nav" onclick="window._prevMon()">‹</button>
+          <button class="btn-nav" onclick="window._nextMon()">›</button>
+        </div>
+      </div>
+      <div class="cal-grid">${cells}</div>
+      <div class="legend"><div class="leg"></div>予約可能日（数字は空き枠数）</div>
+    </div>
+    ${slotHtml}
+  `);
+}
+
+function renderDaySlots(slots, byDate) {
+  const dl = dateLabel(selDate);
+  if (slots.length === 0) return `
+    <div class="card">
+      <div class="day-head">${dl}</div>
+      <div class="no-data">この日の空き枠はありません</div>
+    </div>
+  `;
+
+  const rows = slots.map(s => {
+    const st  = s.start_time.slice(0,5);
+    const dl2 = durLabel(s.duration_minutes || 20);
+    if (s.is_booked) {
+      return `
+        <div class="slot-row taken">
+          <div><div class="slot-time">${st}</div><div class="slot-dur">${dl2}</div></div>
+          <div class="slot-name taken-name">予約済み</div>
+          <span class="slot-badge badge-taken">予約済</span>
+        </div>`;
+    }
+    const isSel = selSlotId === s.id;
+    return `
+      <div class="slot-row open${isSel ? ' sel-slot' : ''}" onclick="window._onSlotClick('${s.id}')">
+        <div><div class="slot-time">${st}</div><div class="slot-dur">${dl2}</div></div>
+        <div class="slot-name">（空き）</div>
+        <span class="slot-badge badge-open">${isSel ? '✓ 選択中' : '記入する'}</span>
+      </div>`;
+  }).join('');
+
+  let writeHtml = '';
+  if (selSlotId) {
+    const slot = slots.find(s => s.id === selSlotId);
+    if (slot && !slot.is_booked) writeHtml = renderWriteForm(slot, slots);
+  }
+
+  return `
+    <div class="card" id="day-card">
+      <div class="day-head">${dl}</div>
+      <div class="slot-list">${rows}</div>
+    </div>
+    ${writeHtml}
+  `;
+}
+
+function renderWriteForm(slot, allSlots) {
+  const st  = slot.start_time.slice(0,5);
+
+  // 連続する空き枠を計算（選択枠の後に続く空きスロット）
+  const idx = allSlots.findIndex(s => s.id === slot.id);
+  let maxCount = 1;
+  for (let i = idx + 1; i < allSlots.length; i++) {
+    if (allSlots[i].is_booked) break;
+    maxCount++;
+    if (maxCount >= 3) break;
+  }
+
+  // 枠数に応じた終了時刻を計算
+  function endTime(count) {
+    const [h, m] = st.split(':').map(Number);
+    const totalMin = m + 20 * count;
+    return p2(h + Math.floor(totalMin/60)) + ':' + p2(totalMin % 60);
+  }
+
+  const countBtns = [1,2,3].map(n => {
+    if (n > maxCount) return `<button class="dur-btn" style="opacity:.3;cursor:not-allowed;" disabled>${n}枠<br><small style="font-size:.6rem;">${20*n}分</small></button>`;
+    const on = selSlotCount === n ? ' on' : '';
+    return `<button class="dur-btn${on}" onclick="window._setCount(${n})">${n}枠<br><small style="font-size:.6rem;">${20*n}分</small></button>`;
+  }).join('');
+
+  const timeRange = `${st}〜${endTime(selSlotCount)}`;
+
+  return `
+    <div class="card" id="write-card">
+      <div class="write-head">
+        <span>予約記入</span>
+        <span class="write-tag">書き込み</span>
+      </div>
+      <div class="slot-info-box">
+        📅 ${dateLabel(selDate)}　🕐 <span id="time-range">${timeRange}</span>
+      </div>
+      <div class="form-row">
+        <label class="form-lbl">予約枠数 <span class="req">*</span></label>
+        <div class="dur-sel" style="margin-bottom:0;">${countBtns}</div>
+        <div style="font-size:.68rem;color:var(--taken);margin-top:5px;">連続する枠を複数まとめて予約できます（最大3枠）</div>
+      </div>
+      <div class="form-row">
+        <label class="form-lbl">お名前 <span class="req">*</span></label>
+        <input class="form-inp" id="f-name" type="text" placeholder="山田 太郎" maxlength="30">
+      </div>
+      <div class="form-row">
+        <label class="form-lbl">メールアドレス <span class="req">*</span></label>
+        <input class="form-inp" id="f-email" type="email" placeholder="s1234567@saitama-u.ac.jp" maxlength="80">
+      </div>
+      <div class="form-row">
+        <label class="form-lbl">面談の目的 <span class="req">*</span></label>
+        <select class="form-inp" id="f-purpose">
+          <option value="">-- 選択してください --</option>
+          <option value="個人面談（ゼミ・担任）">個人面談（ゼミ・担任）</option>
+          <option value="学習・進路相談">学習・進路相談</option>
+          <option value="模擬授業・面接練習">模擬授業・面接練習</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label class="form-lbl">メモ（任意）</label>
+        <input class="form-inp" id="f-note" type="text" placeholder="相談内容など" maxlength="100">
+      </div>
+      <div id="write-alert"></div>
+      <div class="btn-row">
+        <button class="btn-back" onclick="window._cancelWrite()">戻る</button>
+        <button class="btn-submit" id="write-submit" onclick="window._doWrite()">記入して予約する</button>
+      </div>
+    </div>
+  `;
+}
+
+// ── ユーザー操作 ─────────────────────────────────────────────────
+window._prevMon = () => { curMonth.setMonth(curMonth.getMonth()-1); loadUser(); };
+window._nextMon = () => { curMonth.setMonth(curMonth.getMonth()+1); loadUser(); };
+
+window._onDateClick = ds => {
+  selDate   = ds;
+  selSlotId = null;
+  loadUser();
+  setTimeout(() => document.getElementById('day-card')?.scrollIntoView({ behavior:'smooth', block:'start' }), 80);
+};
+
+window._onSlotClick = id => {
+  selSlotId = id;
+  selSlotCount = 1;
+  loadUser();
+  setTimeout(() => document.getElementById('write-card')?.scrollIntoView({ behavior:'smooth', block:'start' }), 80);
+};
+
+window._cancelWrite = () => { selSlotId = null; selSlotCount = 1; loadUser(); };
+
+window._setCount = n => {
+  selSlotCount = n;
+  // フォームを再描画せずに時刻表示だけ更新
+  const [h, m] = document.getElementById('time-range')?.textContent.split('〜')[0].split(':').map(Number) || [0,0];
+  const totalMin = m + 20 * n;
+  const end = String(h + Math.floor(totalMin/60)).padStart(2,'0') + ':' + String(totalMin % 60).padStart(2,'0');
+  const tr = document.getElementById('time-range');
+  if (tr) tr.textContent = String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + '〜' + end;
+  // ボタンのon/offを更新
+  document.querySelectorAll('.dur-btn:not([disabled])').forEach(btn => btn.classList.remove('on'));
+  const btns = document.querySelectorAll('.dur-btn:not([disabled])');
+  btns.forEach(btn => { if (btn.textContent.startsWith(n+'枠')) btn.classList.add('on'); });
+};
+
+window._doWrite = async () => {
+  const name    = document.getElementById('f-name')?.value.trim();
+  const email   = document.getElementById('f-email')?.value.trim();
+  const purpose = document.getElementById('f-purpose')?.value;
+  const note    = document.getElementById('f-note')?.value.trim();
+  const alertEl = document.getElementById('write-alert');
+
+  if (!name)    { alertEl.innerHTML = '<div class="alert err">お名前を入力してください。</div>'; return; }
+  if (!email || !email.includes('@')) { alertEl.innerHTML = '<div class="alert err">正しいメールアドレスを入力してください。</div>'; return; }
+  if (!purpose) { alertEl.innerHTML = '<div class="alert err">面談の目的を選択してください。</div>'; return; }
+
+  const btn = document.getElementById('write-submit');
+  btn.disabled = true; btn.textContent = '送信中…';
+
+  try {
+    // 予約する連続スロットのIDリストを取得
+    const slots = await fetchSlots(selDate);
+    const daySlots = slots.filter(s => s.date === selDate);
+    const startIdx = daySlots.findIndex(s => s.id === selSlotId);
+    const targetSlots = daySlots.slice(startIdx, startIdx + selSlotCount);
+
+    // 念のため全て空きか確認
+    if (targetSlots.some(s => s.is_booked)) {
+      alertEl.innerHTML = '<div class="alert err">選択した枠の一部がすでに予約済みです。ページを更新してください。</div>';
+      btn.disabled = false; btn.textContent = '記入して予約する';
+      return;
+    }
+
+    const st  = targetSlots[0].start_time.slice(0,5);
+    const [h, m] = st.split(':').map(Number);
+    const totalMin = m + 20 * selSlotCount;
+    const et = String(h + Math.floor(totalMin/60)).padStart(2,'0') + ':' + String(totalMin%60).padStart(2,'0');
+    const timeRange = st + '〜' + et;
+
+    // 全スロットを予約済みに更新
+    for (const s of targetSlots) {
+      await setDoc(doc(db, 'slots', s.id), { is_booked: true, booked_name: name }, { merge: true });
+    }
+
+    // 予約記録を1件追加
+    const bookRef = doc(bookingsCol());
+    await setDoc(bookRef, {
+      slot_ids: targetSlots.map(s => s.id),
+      slot_id: selSlotId,   // 後方互換
+      date: selDate, time_range: timeRange,
+      slot_count: selSlotCount,
+      name, email, purpose, note: note || '',
+      booked_at: new Date().toISOString(),
+    });
+
+    // メール通知（失敗してもユーザー側は完了扱い）
+    try {
+      await emailjs.send(CONFIG.emailjsServiceId, CONFIG.emailjsTemplateId, {
+        to_email:   CONFIG.adminEmail,
+        date:       dateLabel(selDate),
+        time_range: timeRange,
+        slot_count: selSlotCount + '枠',
+        name,
+        email,
+        purpose,
+        note:       note || '（なし）',
+      });
+    } catch(mailErr) {
+      console.warn('メール送信失敗:', mailErr);
+    }
+
+    // 申込者への確認メール
+    try {
+      await emailjs.send(CONFIG.emailjsServiceId, CONFIG.emailjsConfirmId, {
+        to_email:   email,
+        date:       dateLabel(selDate),
+        time_range: timeRange,
+        slot_count: selSlotCount + '枠',
+        name,
+        email,
+        purpose,
+        note:       note || '（なし）',
+      });
+    } catch(mailErr) {
+      console.warn('確認メール送信失敗:', mailErr);
+    }
+
+    setApp(`
+      <div class="card">
+        <div class="done-wrap">
+          <div class="done-ico">📝</div>
+          <div class="done-title">記入が完了しました</div>
+          <p class="done-sub">${name} さん<br>${dateLabel(selDate)}　${timeRange}（${selSlotCount}枠）<br><small style="color:var(--taken);">${purpose}</small></p>
+          <button class="btn-submit" style="max-width:160px;margin:24px auto 0;display:block;"
+            onclick="window._resetUser()">戻る</button>
+        </div>
+      </div>
+    `);
+  } catch(e) {
+    alertEl.innerHTML = `<div class="alert err">エラーが発生しました: ${e.message}</div>`;
+    btn.disabled = false; btn.textContent = '記入して予約する';
+  }
+};
+
+window._resetUser = () => { selDate = null; selSlotId = null; loadUser(); };
+
+// ── 管理: ログイン ────────────────────────────────────────────────
+document.getElementById('gear-btn').onclick = () => {
+  if (isAdmin) { renderAdmin(); return; }
+  const pwd = prompt('管理者パスワードを入力してください');
+  if (pwd === null) return;
+  if (pwd === CONFIG.adminPassword) { isAdmin = true; renderAdmin(); }
+  else alert('パスワードが正しくありません。');
+};
+
+// ── 管理: パネル ─────────────────────────────────────────────────
+async function renderAdmin() {
+  setApp(`
+    <div class="card">
+      <div class="admin-top">
+        <div class="admin-title">管理パネル<span class="admin-badge">ADMIN</span></div>
+        <button class="btn-exit" onclick="window._exitAdmin()">← 戻る</button>
+      </div>
+      <div class="tabs">
+        <div class="tab ${adminTab==='calendar'?'on':''}" onclick="window._switchTab('calendar')">スロット設定</div>
+        <div class="tab ${adminTab==='bookings'?'on':''}" onclick="window._switchTab('bookings')">予約一覧</div>
+      </div>
+      <div id="admin-body"><div class="loading"><span class="spin"></span></div></div>
+    </div>
+  `);
+  adminTab === 'calendar' ? await renderAdminCal() : await renderAdminBookings();
+}
+
+window._switchTab = async tab => { adminTab = tab; await renderAdmin(); };
+window._exitAdmin = () => { isAdmin = false; selDate = null; selSlotId = null; loadUser(); };
+
+// ── 管理: スロット設定 ────────────────────────────────────────────
+let adminSelDur = 20;
+
+async function renderAdminCal() {
+  const slots  = await fetchSlots(todayStr());
+  const byDate = groupByDate(slots);
+  const year   = curMonth.getFullYear();
+  const month  = curMonth.getMonth();
+  const today  = parseDt(todayStr());
+  const dows   = ['日','月','火','水','木','金','土'];
+
+  let cells = dows.map(d => `<div class="cal-dh">${d}</div>`).join('');
+  const firstDow = new Date(year, month, 1).getDay();
+  const lastDay  = new Date(year, month+1, 0).getDate();
+  for (let i = 0; i < firstDow; i++) cells += '<div class="cal-d"></div>';
+  for (let d = 1; d <= lastDay; d++) {
+    const ds  = `${year}-${p2(month+1)}-${p2(d)}`;
+    const dt  = parseDt(ds);
+    const isPast = dt < today;
+    const cnt    = (byDate[ds]||[]).length;
+    const isSel  = selDate === ds;
+
+    let cls = 'cal-d';
+    if (isPast) cls += ' past';
+    else if (cnt > 0) cls += ' has-open';
+    if (isSel) cls += ' sel';
+    if (dt.getTime() === today.getTime()) cls += ' today';
+
+    const click = !isPast ? `onclick="window._adminDateClick('${ds}')"` : '';
+    const sup   = cnt > 0 ? `<span class="cnt">${cnt}</span>` : '';
+    cells += `<div class="${cls}" ${click}>${d}${sup}</div>`;
+  }
+
+  let editor = '';
+  if (selDate && parseDt(selDate) >= today) {
+    const daySlots = byDate[selDate] || [];
+    editor = buildSlotEditor(selDate, daySlots);
+  }
+
+  document.getElementById('admin-body').innerHTML = `
+    <div class="admin-cal-nav">
+      <div style="font-weight:500;">${year}年${month+1}月</div>
+      <div class="nav-btns">
+        <button class="btn-nav" onclick="window._adminPrev()">‹</button>
+        <button class="btn-nav" onclick="window._adminNext()">›</button>
+      </div>
+    </div>
+    <div class="cal-grid">${cells}</div>
+    <p style="margin-top:8px;font-size:.68rem;color:var(--taken);">日付をクリックしてスロットを追加／削除できます。</p>
+    ${editor}
+  `;
+}
+
+function buildSlotEditor(dateStr, existing) {
+  const all = genSlots(CONFIG.slotStartHour, CONFIG.slotEndHour, 20);
+  const durBtns = DURATIONS.map(d =>
+    `<button class="dur-btn ${adminSelDur===d.min?'on':''}" onclick="window._selDur(${d.min})">${d.label}</button>`
+  ).join('');
+
+  let aslots = '';
+  for (const t of all) {
+    const ex = existing.find(s => s.start_time.slice(0,5) === t);
+    if (ex) {
+      if (ex.is_booked) {
+        aslots += `<div class="aslot booked">${t}<small>${ex.booked_name||'予約済'}</small></div>`;
+      } else {
+        const dl2 = durLabel(ex.duration_minutes||20);
+        aslots += `<div class="aslot on" onclick="window._removeSlot('${ex.id}')" title="クリックで削除">${t}<small>✓${dl2}</small></div>`;
+      }
+    } else {
+      aslots += `<div class="aslot" onclick="window._addSlot('${dateStr}','${t}')">${t}</div>`;
+    }
+  }
+
+  return `
+    <div style="margin-top:18px;border-top:1px solid var(--rule);padding-top:16px;">
+      <div style="font-weight:500;font-size:.875rem;margin-bottom:10px;">${dateLabel(dateStr)} のスロット</div>
+      <div style="font-size:.72rem;color:var(--taken);margin-bottom:8px;">追加時の面談時間：</div>
+      <div class="dur-sel">${durBtns}</div>
+      <div class="aslot-grid">${aslots}</div>
+      <div style="font-size:.65rem;color:var(--taken);margin-top:8px;">
+        緑＝設定済（クリックで削除）　赤文字＝予約済（削除不可）
+      </div>
+    </div>
+  `;
+}
+
+window._selDur = async dur => { adminSelDur = dur; await renderAdminCal(); };
+window._adminDateClick = async ds => { selDate = ds; await renderAdminCal(); };
+window._adminPrev = async () => { curMonth.setMonth(curMonth.getMonth()-1); await renderAdminCal(); };
+window._adminNext = async () => { curMonth.setMonth(curMonth.getMonth()+1); await renderAdminCal(); };
+
+window._addSlot = async (date, start) => {
+  const id = slotId(date, start);
+  await setDoc(doc(db, 'slots', id), {
+    date, start_time: start + ':00',
+    duration_minutes: adminSelDur,
+    is_booked: false, booked_name: '',
+  });
+  await renderAdminCal();
+};
+
+window._removeSlot = async id => {
+  if (!confirm('このスロットを削除しますか？')) return;
+  await deleteDoc(doc(db, 'slots', id));
+  await renderAdminCal();
+};
+
+// ── 管理: 予約一覧 ────────────────────────────────────────────────
+async function renderAdminBookings() {
+  const bookings = await fetchBookings();
+  if (!bookings.length) {
+    document.getElementById('admin-body').innerHTML = '<div class="no-data">まだ予約はありません</div>';
+    return;
+  }
+
+  // slotデータを取得して紐付け
+  const slots = await fetchSlots('2000-01-01');
+  const slotMap = {};
+  for (const s of slots) slotMap[s.id] = s;
+
+  const items = bookings.map(b => {
+    const sl  = slotMap[b.slot_id];
+    const dl  = b.date ? dateLabel(b.date) : '—';
+    const st  = sl ? sl.start_time.slice(0,5) : '—';
+    const dur = sl ? durLabel(sl.duration_minutes || 20) : '—';
+    const tr  = b.time_range || st;
+    const cnt = b.slot_count ? `${b.slot_count}枠` : dur;
+    const sub = [b.purpose, b.email, b.note].filter(Boolean).join('　');
+    return `
+      <div class="booking-item">
+        <div class="booking-date">${dl}</div>
+        <div class="booking-time">${tr}</div>
+        <div class="booking-dur">${cnt}</div>
+        <div class="booking-name">${b.name}${sub ? `<div style="font-size:.7rem;color:var(--taken);margin-top:2px;">${sub}</div>` : ''}</div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('admin-body').innerHTML = items;
+}
+
+// ── ヘルパー: 時刻スロット生成 ────────────────────────────────────
+function genSlots(startH, endH, step) {
+  const result = [];
+  let h = startH, m = 0;
+  while (h < endH) {
+    result.push(`${p2(h)}:${p2(m)}`);
+    m += step;
+    if (m >= 60) { h++; m -= 60; }
+  }
+  return result;
+}
+
+// ── 起動 ─────────────────────────────────────────────────────────
+document.getElementById('hd-title').textContent = CONFIG.appTitle;
+document.getElementById('hd-sub').textContent   = CONFIG.appSubtitle;
+loadUser();
+</script>
+</body>
+</html>
